@@ -449,6 +449,27 @@ Function AbortRetryExecWait
     ${LoopWhile} $0 != "0"
 FunctionEnd
 
+Function AbortRetryExecWaitLog
+    Pop $1
+    Pop $2
+    ${Do}
+        nsExec::ExecToLog $2
+        Pop $0
+        ${If} $0 != "0"
+            MessageBox MB_ABORTRETRYIGNORE|MB_ICONEXCLAMATION|MB_DEFBUTTON3 \
+                    $1 /SD IDIGNORE IDABORT abort IDRETRY retry
+            ; IDIGNORE: Continue anyway
+            StrCpy $0 "0"
+            goto retry
+          abort:
+            ; Abort installation
+            Abort
+          retry:
+            ; Retry the ExecWait command
+        ${EndIf}
+    ${LoopWhile} $0 != "0"
+FunctionEnd
+
 # Installer sections
 Section "Install"
 
@@ -469,11 +490,15 @@ Section "Install"
 
     @PKG_COMMANDS@
 
+
     ${If} $InstMode = ${JUST_ME}
         SetOutPath "$INSTDIR"
         FileOpen $0 ".nonadmin" w
         FileClose $0
     ${EndIf}
+
+
+    @WEB_ENVIRONMENT@
 
     DetailPrint "Creating @NAME@ menus..."
     push '"$INSTDIR\pythonw.exe" -E -s "$INSTDIR\Lib\_nsis.py" mkmenus @MENU_PKGS@'

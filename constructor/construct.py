@@ -90,6 +90,12 @@ The filename of the installer being created.  A reasonable default filename
 will determined by the `name`, `version`, platform and installer type.
 '''),
 
+    ('web_environment',           False, str, '''
+Path to a conda environment file to install into the installation. Note that
+this file is used on the installation side, allowing for packages to be
+fetched over the network.
+'''),
+
     ('license_file',           False, str, '''
 Path to the license file being displayed by the installer during the install
 process.

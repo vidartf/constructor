@@ -63,7 +63,7 @@ def main_build(dir_path, output_dir='.', platform=cc_platform, verbose=True):
         print('conda packages download: %s' % info['_download_dir'])
 
     for key in ('license_file', 'welcome_image', 'header_image', 'icon_image',
-                'pre_install', 'post_install'):
+                'pre_install', 'post_install', 'web_environment'):
         if key in info:
             info[key] = abspath(join(dir_path, info[key]))
 

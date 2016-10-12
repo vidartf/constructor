@@ -24,6 +24,16 @@ THIS_DIR = dirname(__file__)
 NSIS_DIR = join(THIS_DIR, 'nsis')
 MAKENSIS_EXE = join(sys.prefix, 'NSIS', 'makensis.exe')
 
+WEB_ENVIRONMENT_CMD = """
+File web_environment.yml
+DetailPrint "Installing environment (possibly over the network)"
+push '"$INSTDIR\Scripts\conda.exe" install yaml -y'
+push 'Failed to install environment bootstrapper'
+call AbortRetryExecWaitLog
+push '"$INSTDIR\Scripts\conda.exe" env update -n root -f "$INSTDIR\pkgs\web_environment.yml"'
+push 'Failed to install environment'
+call AbortRetryExecWaitLog
+"""
 
 def str_esc(s):
     for a, b in [('$', '$$'), ('"', '$\\"'), ('\n', '$\\n'), ('\t', '$\\t')]:
@@ -126,6 +136,7 @@ def make_nsi(info, dir_path):
         ('@NSIS_DIR@', NSIS_DIR),
         ('@BITS@', str(arch)),
         ('@PKG_COMMANDS@', '\n    '.join(cmds)),
+        ('@WEB_ENVIRONMENT@', '\n    '.join(WEB_ENVIRONMENT_CMD.splitlines())),
         ('@MENU_PKGS@', ' '.join(info.get('menu_packages', []))),
         ]:
         data = data.replace(key, value)
@@ -175,6 +186,10 @@ def create(info):
     except KeyError:
         with open(post_dst, 'w') as fo:
             fo.write(":: this is an empty post install .bat script\n")
+
+    if 'web_environment' in info:
+        env_dst = join(tmp_dir, 'web_environment.yml')
+        shutil.copy(info['web_environment'], env_dst)
 
     write_images(info, tmp_dir)
     nsi = make_nsi(info, tmp_dir)
