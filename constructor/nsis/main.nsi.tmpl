@@ -449,27 +449,6 @@ Function AbortRetryExecWait
     ${LoopWhile} $0 != "0"
 FunctionEnd
 
-Function AbortRetryExecWaitLog
-    Pop $1
-    Pop $2
-    ${Do}
-        nsExec::ExecToLog $2
-        Pop $0
-        ${If} $0 != "0"
-            MessageBox MB_ABORTRETRYIGNORE|MB_ICONEXCLAMATION|MB_DEFBUTTON3 \
-                    $1 /SD IDIGNORE IDABORT abort IDRETRY retry
-            ; IDIGNORE: Continue anyway
-            StrCpy $0 "0"
-            goto retry
-          abort:
-            ; Abort installation
-            Abort
-          retry:
-            ; Retry the ExecWait command
-        ${EndIf}
-    ${LoopWhile} $0 != "0"
-FunctionEnd
-
 # Installer sections
 Section "Install"
 

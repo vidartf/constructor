@@ -29,10 +29,10 @@ File web_environment.yml
 DetailPrint "Installing environment (possibly over the network)"
 push '"$INSTDIR\Scripts\conda.exe" install yaml -y'
 push 'Failed to install environment bootstrapper'
-call AbortRetryExecWaitLog
+call AbortRetryExecWait
 push '"$INSTDIR\Scripts\conda.exe" env update -n root -f "$INSTDIR\pkgs\web_environment.yml"'
 push 'Failed to install environment'
-call AbortRetryExecWaitLog
+call AbortRetryExecWait
 """
 
 def str_esc(s):
