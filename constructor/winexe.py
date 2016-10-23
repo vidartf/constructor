@@ -94,6 +94,7 @@ def make_nsi(info, dir_path):
     py_name, py_version, unused_build = dists[0].rsplit('-', 2)
     assert py_name == 'python'
     arch = int(info['_platform'].split('-')[1])
+    web_cmd = WEB_ENVIRONMENT_CMD if 'web_environment' in info else ''
 
     # these appear as __<key>__ in the template, and get escaped
     replace = {
@@ -136,7 +137,7 @@ def make_nsi(info, dir_path):
         ('@NSIS_DIR@', NSIS_DIR),
         ('@BITS@', str(arch)),
         ('@PKG_COMMANDS@', '\n    '.join(cmds)),
-        ('@WEB_ENVIRONMENT@', '\n    '.join(WEB_ENVIRONMENT_CMD.splitlines())),
+        ('@WEB_ENVIRONMENT@', '\n    '.join(web_cmd.splitlines())),
         ('@MENU_PKGS@', ' '.join(info.get('menu_packages', []))),
         ]:
         data = data.replace(key, value)
