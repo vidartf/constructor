@@ -27,7 +27,7 @@ MAKENSIS_EXE = join(sys.prefix, 'NSIS', 'makensis.exe')
 WEB_ENVIRONMENT_CMD = """
 File web_environment.yml
 DetailPrint "Installing environment (possibly over the network)"
-push '"$INSTDIR\Scripts\conda.exe" install yaml -y'
+push '"$INSTDIR\Scripts\conda.exe" install pyyaml -y'
 push 'Failed to install environment bootstrapper'
 call AbortRetryExecWait
 push '"$INSTDIR\Scripts\conda.exe" env update -n root -f "$INSTDIR\pkgs\web_environment.yml"'
