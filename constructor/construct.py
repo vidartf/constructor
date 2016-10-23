@@ -36,6 +36,11 @@ name is independent of the names of any of the conda packages the installer
 is composed of.
 '''),
 
+    ('company',                   False,  str, '''
+Name of the organization/owner of the installer. The installer will show
+this string in the footer. Defaults to 'Unknown, Inc.'.
+'''),
+
     ('version',                True,  str, '''
 Version of the installer.  Just like the installer name, this version
 is independent of any conda package versions contained in the installer.
