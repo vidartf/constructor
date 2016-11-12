@@ -47,7 +47,7 @@ def escape_id(id):
     return id.replace('-', '')
 
 def read_wxs_tmpl():
-    path = join(WIX_DIR, template or 'template.wxs')
+    path = join(WIX_DIR, 'template.wxs')
     print('Reading: %s' % path)
     with open(path) as fi:
         return fi.read()

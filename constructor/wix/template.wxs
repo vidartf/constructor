@@ -10,7 +10,9 @@
 
   @PROPERTIES@
   
-  <Media Id='1' Cabinet='$(var.Name)' EmbedCab="yes" />
+  <!-- No compression as pkgs are alread compressed -->
+  <Media Id='1' Cabinet='$(var.Name)' EmbedCab='yes'
+    CompressionLevel='none' />
 
   <!-- Begin file hierarchy -->
   <Directory Id='TARGETDIR' Name='SourceDir'>
