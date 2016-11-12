@@ -71,6 +71,7 @@ def pkg2component(download_dir, dists, py_version):
     for i, fn in enumerate(vs_dists + dists):
         name, version, unused_build = fn.rsplit('-', 2)
         id = escape_xml(escape_id(name))
+        xml_fn = escape_xml(fn)
         source_fn = escape_xml(join(download_dir, fn))
         extracted_folder = escape_xml(fn.replace('.tar.bz2', ''))
         assert len(extracted_folder) > 0
@@ -83,7 +84,7 @@ def pkg2component(download_dir, dists, py_version):
         elif fn == vs_dists[0]:
             continue
         yield "<Component Id='%s' Guid='*'>" % id
-        yield "  <File Id='%sARCHIVE' Name='%s' Source='%s' KeyPath='yes' />" % (id, escape_xml(name), source_fn)
+        yield "  <File Id='%sARCHIVE' Name='%s' Source='%s' KeyPath='yes' />" % (id, xml_fn, source_fn)
         yield "</Component>"
         # Components to remove extracted directory when uninstalling
         yield "<Directory Id='%sDIR' Name='%s' >" % (id, extracted_folder)
@@ -217,6 +218,11 @@ def create(info):
     verify_wix_install()
     # tmp_dir = tempfile.mkdtemp()
     tmp_dir = 'c:\\github\\ctorout\\build\\'
+    outfile = info['_outpath'];
+    license_file = abspath(info.get('license_file',
+        join(WIX_DIR, 'placeholder_license.txt'))),
+    welcome_image = info.get('welcome_image', None)
+    header_image = info.get('header_image', None)
     preconda.write_files(info, tmp_dir)
     if 'pre_install' in info:
         sys.exit("Error: Cannot run pre install on Windows, sorry.\n")
@@ -241,8 +247,13 @@ def create(info):
 
     wixobj = os.path.splitext(wxs)[0] + '.wixobj'
     # ['extA', 'extB'] -> ['-ext', 'extA', '-ext', 'extB']
-    ext_args = list(chain(*zip_longest([], EXTENSIONS, fillvalue=['-ext'])))
-    args = [LIGHT_EXE] + ext_args + [wixobj]
+    ext_args = list(chain(*zip_longest([], EXTENSIONS, fillvalue='-ext')))
+    license_args = ['-dWixUILicenseRtf=%s' % license_file]
+    args = [
+        LIGHT_EXE, '-out', outfile,
+        '-dWixUIDialogBmp=welcome.bmp',
+        '-dWixUIBannerBmp=header.bmp']
+    args += license_args + ext_args + [wixobj]
     print('Calling: %s' % args)
     check_call(args)
     #shutil.rmtree(tmp_dir)
