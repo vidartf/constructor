@@ -156,7 +156,7 @@ def make_wxs(info, dir_path):
     replace = {
         'NAME': name,
         'VERSION': info['version'],
-        'COMPANY': info.get('company', 'Unknown, Inc.'),
+        'COMPANY': info.get('company', 'Unknown'),
         'PRODUCT_GUID': product_uuid,
         'UPGRADE_GUID': upgrade_uuid,
         'LICENSEFILE': abspath(info.get('license_file',

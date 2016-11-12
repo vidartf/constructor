@@ -38,7 +38,7 @@ is composed of.
 
     ('company',                   False,  str, '''
 Name of the organization/owner of the installer. The installer will show
-this string in the footer. Defaults to 'Unknown, Inc.'.
+this string in the footer. Defaults to 'Unknown'.
 '''),
 
     ('version',                True,  str, '''
