@@ -12,10 +12,17 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 ttf_path = join(dirname(__file__), 'ttf', 'Vera.ttf')
-welcome_size = 164, 314
-header_size = 150, 57
 icon_size = 256, 256
 white = 0xff, 0xff, 0xff
+
+
+def welcome_size(info):
+    msi = info['_msi']
+    return (493, 312) if msi else (164, 314)
+
+def header_size(info):
+    msi = info['_msi']
+    return (493, 58) if msi else (150, 57)
 
 
 def new_background(size, color, bs=20, boxes=50):
@@ -31,7 +38,7 @@ def new_background(size, color, bs=20, boxes=50):
 
 def mk_welcome_image(info):
     font = ImageFont.truetype(ttf_path, 20)
-    im = new_background(welcome_size, info['_color'])
+    im = new_background(welcome_size(info), info['_color'])
     d = ImageDraw.Draw(im)
     d.text((20, 100), info['name'], fill=white, font=font)
     d.text((20, 130), info['version'], fill=white, font=font)
@@ -40,9 +47,11 @@ def mk_welcome_image(info):
 
 def mk_header_image(info):
     font = ImageFont.truetype(ttf_path, 20)
-    im = Image.new('RGB', header_size, color=white)
+    im = Image.new('RGB', header_size(info), color=white)
     d = ImageDraw.Draw(im)
-    d.text((20, 15), info['name'], fill=info['_color'], font=font)
+    msi = info['_msi']
+    xy = (300, 15) if msi else (20, 15)
+    d.text(xy, info['name'], fill=info['_color'], font=font)
     return im
 
 
@@ -69,10 +78,11 @@ def add_color_info(info):
 
 
 def write_images(info, dir_path):
+    msi = info['_msi']
     for tp, size, f, ext in [
-        ('welcome', welcome_size, mk_welcome_image, '.bmp'),
-        ('header',  header_size,  mk_header_image,  '.bmp'),
-        ('icon',    icon_size,    mk_icon_image,    '.ico'),
+        ('welcome', welcome_size(info), mk_welcome_image, '.bmp'),
+        ('header',  header_size(info),  mk_header_image,  '.bmp'),
+        ('icon',    icon_size,          mk_icon_image,    '.ico'),
         ]:
         key = tp + '_image'
         if key in info:

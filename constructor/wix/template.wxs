@@ -1,0 +1,144 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+<Product Name='__NAME__' Manufacturer='__COMPANY__'
+    Id='__PRODUCT_GUID__' 
+    UpgradeCode='__UPGRADE_GUID__'
+    Language='1033' Codepage='1252' Version='__VERSION__'>
+  <Package Id='*' Keywords='Installer'
+      Description="__NAME__ Installer, Created using conda constructor"
+      Manufacturer='__COMPANY__' InstallerVersion='100' Languages='1033'
+      Compressed='yes' SummaryCodepage='1252' />
+
+  @PROPERTIES@
+  
+  <!-- No compression as pkgs are alread compressed -->
+  <Media Id='1' Cabinet='$(var.Name)' EmbedCab='yes'
+    CompressionLevel='none' />
+
+  <!-- Begin file hierarchy -->
+  <Directory Id='TARGETDIR' Name='SourceDir'>
+    <Directory Id='ProgramFilesFolder' Name='System drive'>
+      <Directory Id='INSTALLDIR' Name='$(var.Name)'>
+        <Directory Id='Lib' Name='Lib'>
+          <Component Id='HelperPy' Guid='*'>
+            <File Id='HelperPyFILE' Name='_helper.py' Source='$(var.WixDir)\_helper.py' KeyPath='yes' />
+          </Component>
+          <Component Id='SystemPathPy' Guid='*'>
+            <File Id='SystemPathPyFILE' Name='_system_path.py' Source='$(var.WixDir)\_system_path.py' KeyPath='yes' />
+          </Component>
+        </Directory>
+        <Directory Id='pkgs' Name='pkgs'>
+          <Component Id='InstallPy' Guid='*'>
+            <File Id='InstallPyFILE' Name='$(var.InstallPy)' Source='$(var.ResourcePath)\$(var.InstallPy)' KeyPath='yes' />
+          </Component>
+          <Component Id='Urls' Guid='*'>
+            <File Id='UrlsFILE' Name='$(var.UrlsFile)' Source='$(var.ResourcePath)\$(var.UrlsFile)' KeyPath='yes' />
+          </Component>
+          <Component Id='UrlsTxt' Guid='*'>
+            <File Id='UrlsTxtFILE' Name='$(var.UrlsTxtFile)' Source='$(var.ResourcePath)\$(var.UrlsTxtFile)' KeyPath='yes' />
+          </Component>
+          <Component Id='PostInstall' Guid='*'>
+            <File Id='PostInstallFILE' Name='$(var.PostInstall)' Source='$(var.ResourcePath)\$(var.PostInstall)' KeyPath='yes' Vital='no' />
+          </Component>
+
+          @PKG_COMPONENTS@
+
+        </Directory>
+      </Directory>
+    </Directory>
+  </Directory>
+  <!-- End file hierarchy -->
+
+  <!-- Begin environment variables -->
+  <DirectoryRef Id='TARGETDIR'>
+    <Component Id='UpdatePath' Guid="$(var.EnvGUID)">
+      <Environment Id='UpdatePathEntries' Name='PATH' Action='set' 
+          Permanent='no' System='no' Part='first'
+          Value='[INSTALLDIR]\Library\bin;[INSTALLDIR]\Scripts;[INSTALLDIR]' />
+    </Component>
+  </DirectoryRef>
+  <!-- End environment variables -->
+
+  <!-- Begin registry entries -->
+  <DirectoryRef Id='TARGETDIR'>
+    <Component Id="InstallDirRegEntries" Guid="*"> 
+      <RegistryKey Root='HKMU' Key='Software\Python\[Manufacturer]\[ProductName]'>
+        <RegistryValue Type='string' Name='InstallDir' Value='[INSTALLDIR]' KeyPath="yes" />
+        <RegistryValue Type='integer' Name='Flag' Value='0'/>
+      </RegistryKey>
+    </Component>
+
+    <Component Id="SysPythonRegistryEntries" Guid="*"> 
+      <RegistryKey Root='HKLM' Key='Software\Python\PythonCore\$(var.PythonVersion)' >
+
+        <RegistryKey Key='InstallPath'>
+          <RegistryValue Type='string' Value='[INSTALLDIR]' KeyPath="yes" />
+          <RegistryValue Type='string' Name='InstallGroup' Value='Python $(var.PythonVersion)' />
+        </RegistryKey>
+        <RegistryKey Key='Modules' />
+        <RegistryKey Key='PythonPath'>
+          <RegistryValue Type='string' Value='[INSTALLDIR]\Lib;$INSTDIR\DLLs' />
+        </RegistryKey>
+        <RegistryKey Key='Help\Main Python Documentation'>
+          <RegistryValue Type='string' Name='Main Python Documentation' 
+              Value='[INSTALLDIR]\Doc\python$(var.PythonVersionJustDigits).chm' />
+        </RegistryKey>
+      </RegistryKey>
+    </Component>
+  </DirectoryRef>
+  <!-- End registry entries -->
+
+
+  <!-- Begin feature hierarchy -->
+  <Feature Id='Complete' Title='$(var.Name)'
+      AllowAdvertise='no'
+      Display='expand' Level='1' ConfigurableDirectory='INSTALLDIR'>
+
+    <Feature Id='CondaPython' Title='Conda/Python'
+        Description='Conda and Python base.' Display='expand' Level='1'
+        AllowAdvertise='no' Absent='disallow'>
+      <ComponentRef Id='HelperPy' />
+      <ComponentRef Id='SystemPathPy' />
+      <ComponentRef Id='InstallPy' />
+      <ComponentRef Id='Urls' />
+      <ComponentRef Id='UrlsTxt' />
+      <ComponentRef Id='MSVC' />
+      <ComponentRef Id='MSVCFOLDER' />
+      <ComponentRef Id='Python' />
+      <ComponentRef Id='PythonFOLDER' />
+      <ComponentRef Id='InstallDirRegEntries' />
+      <ComponentRef Id='UpdatePath' />
+      <ComponentRef Id='PostInstall' />
+    </Feature>
+
+    <Feature Id='Packages' Title='$(var.Name) Packages' 
+      AllowAdvertise='no' Level='1'
+      Description='The packages that make up $(var.Name).'>
+      @PKG_COMPONENTS_REFS@
+    </Feature>
+
+    <Feature Id='SystemPython' Title='Register as system python' 
+        AllowAdvertise='no' Level='10'>
+      <ComponentRef Id="SysPythonRegistryEntries" />
+    </Feature>
+  </Feature>
+  <!-- End feature hierarchy -->
+
+  <!-- Begin upgrade handling -->
+  <MajorUpgrade 
+    AllowDowngrades="no"
+    DowngradeErrorMessage="A later version of [ProductName] is already installed."
+    AllowSameVersionUpgrades="no"
+  />
+  <!-- End upgrade handling -->
+
+  <!-- Begin UI library references -->
+  <UIRef Id="WixUI_FeatureTree" />
+  <!--<UIRef Id="WixUI_Advanced" />-->
+  <UIRef Id="WixUI_ErrorProgressText" />
+  <!-- End UI library references -->
+
+  <Icon Id="icon.ico" SourceFile="$(var.IconFile)"/>
+  <Property Id="ARPPRODUCTICON" Value="icon.ico" />
+</Product>
+</Wix>

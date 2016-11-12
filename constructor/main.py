@@ -25,16 +25,20 @@ def get_output_filename(info):
         pass
 
     osname, arch = info['_platform'].split('-')
+    msi = info['_msi']
     os_map = {'linux': 'Linux', 'osx': 'MacOSX', 'win': 'Windows'}
     arch_name_map = {'64': 'x86_64', '32': 'x86'}
-    ext = 'exe' if osname == 'win' else 'sh'
+    if osname == 'win':
+        ext = 'msi' if msi else 'exe'
+    else:
+        ext = 'sh'
     return '%s-%s-%s.%s' % ('%(name)s-%(version)s' % info,
                             os_map.get(osname, osname),
                             arch_name_map.get(arch, arch),
                             ext)
 
 
-def main_build(dir_path, output_dir='.', platform=cc_platform, verbose=True):
+def main_build(dir_path, output_dir='.', platform=cc_platform, verbose=True, msi=False):
     print('platform: %s' % platform)
     try:
         osname, unused_arch = platform.split('-')
@@ -47,15 +51,19 @@ def main_build(dir_path, output_dir='.', platform=cc_platform, verbose=True):
         from constructor.shar import create
     elif osname == 'win':
         if sys.platform != 'win32':
-            sys.exit("Error: Cannot create Windows .exe installer on "
+            sys.exit("Error: Cannot create Windows installer on "
                      "non-Windows platform.")
-        from constructor.winexe import create
+        if msi:
+            from constructor.winmsi import create
+        else:
+            from constructor.winexe import create
     else:
         sys.exit("Error: invalid OS name '%s'" % osname)
 
     construct_path = join(dir_path, 'construct.yaml')
     info = construct.parse(construct_path, platform)
     construct.verify(info)
+    info['_msi'] = msi
     info['_platform'] = platform
     info['_download_dir'] = join(expanduser('~'), '.conda', 'constructor',
                                  platform)
@@ -110,6 +118,9 @@ def main():
                  default=cc_platform,
                  help="the platform for which installer is for, "
                       "defaults to '%default'")
+    
+    p.add_option('--msi',
+                action="store_true")
 
     p.add_option('--test',
                  help="perform some self tests and exit",
@@ -146,7 +157,7 @@ def main():
         p.error("no such directory: %s" % dir_path)
 
     main_build(dir_path, output_dir=opts.output_dir, platform=opts.platform,
-               verbose=opts.verbose)
+               verbose=opts.verbose, msi=opts.msi)
 
 
 if __name__ == '__main__':
