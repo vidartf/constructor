@@ -10,9 +10,10 @@ import os
 import sys
 import shutil
 import tempfile
+import tarfile
 from itertools import chain
 from six.moves import zip_longest
-from os.path import abspath, dirname, isfile, join
+from os.path import abspath, dirname, isfile, isdir, join, split, splitext
 from subprocess import check_call, check_output
 import uuid
 from xml.sax.saxutils import escape as escape_xml
@@ -28,8 +29,9 @@ THIS_DIR = dirname(__file__)
 WIX_DIR = join(THIS_DIR, 'wix')
 CANDLE_EXE = join(sys.prefix, 'wix', 'candle.exe')
 LIGHT_EXE = join(sys.prefix, 'wix', 'light.exe')
+HEAT_EXE = join(sys.prefix, 'wix', 'heat.exe')
 
-EXTENSIONS = ['WixUIExtension']
+EXTENSIONS = ['WixUIExtension', 'WixUtilExtension']
 
 # WARNING: DO NOT MODIFY THIS UUID, AS IT WILL BREAK 
 # BACKWARDS COMPATIBILITY OF ALL GENERATED INSTALLERS
@@ -51,65 +53,6 @@ def read_wxs_tmpl():
     print('Reading: %s' % path)
     with open(path) as fi:
         return fi.read()
-
-
-def find_vs_runtimes(dists, py_version):
-    vs_map = {'2.7': 'vs2008_runtime',
-              '3.4': 'vs2010_runtime',
-              '3.5': 'vs2015_runtime'}
-    vs_runtime = vs_map.get(py_version[:3])
-    return [dist for dist in dists
-            if name_dist(dist) in (vs_runtime, 'msvc_runtime')]
-
-
-def pkg2component(download_dir, dists, py_version):
-    vs_dists = find_vs_runtimes(dists, py_version)
-    print("MSVC runtimes found: %s" % vs_dists)
-    if len(vs_dists) != 1:
-        sys.exit("Error: number of MSVC runtimes found: %d" % len(vs_dists))
-
-    for i, fn in enumerate(vs_dists + dists):
-        name, version, unused_build = fn.rsplit('-', 2)
-        id = escape_xml(escape_id(name))
-        xml_fn = escape_xml(fn)
-        source_fn = escape_xml(join(download_dir, fn))
-        extracted_folder = escape_xml(fn.replace('.tar.bz2', ''))
-        assert len(extracted_folder) > 0
-        if i == 0: # MSVC runtimes
-            assert 'runtime' in fn
-            id = 'MSVC'
-        elif i == 1: # Python
-            assert fn.startswith('python-')
-            id = 'Python'
-        elif fn == vs_dists[0]:
-            continue
-        yield "<Component Id='%s' Guid='*'>" % id
-        yield "  <File Id='%sARCHIVE' Name='%s' Source='%s' KeyPath='yes' />" % (id, xml_fn, source_fn)
-        yield "</Component>"
-        # Components to remove extracted directory when uninstalling
-        yield "<Directory Id='%sDIR' Name='%s' >" % (id, extracted_folder)
-        yield "  <Component Id='%sFOLDER' Guid='%s'>" % (id, namespace_uuid(name))
-        yield "    <RemoveFile Id='%sPackageFiles' On='uninstall' Name='*' />" % id
-        yield "    <RemoveFolder Id='%sFILES' On='uninstall' />" % id
-        yield "  </Component>"
-        yield "</Directory>"
-
-
-def pkg2component_refs(dists, py_version):
-    vs_dists = find_vs_runtimes(dists, py_version)
-    print("MSVC runtimes found: %s" % vs_dists)
-    if len(vs_dists) != 1:
-        sys.exit("Error: number of MSVC runtimes found: %d" % len(vs_dists))
-
-    for i, fn in enumerate(vs_dists + dists):
-        name, version, unused_build = fn.rsplit('-', 2)
-        if i < 2: # MSVC runtimes or Python
-            continue  # Included manually in template
-        elif fn == vs_dists[0]:
-            continue
-        else:
-            yield "<ComponentRef Id='%s' />" % escape_id(name)
-            yield "<ComponentRef Id='%sFOLDER' />" % escape_id(name)
 
 
 def properties(info, dir_path):
@@ -135,6 +78,108 @@ def properties(info, dir_path):
     for key, value in properties.items():
         value = escape_xml(value)
         yield "<?define %s='%s'?>" % (key, value)
+
+
+def find_vs_runtimes(dists, py_version):
+    vs_map = {'2.7': 'vs2008_runtime',
+              '3.4': 'vs2010_runtime',
+              '3.5': 'vs2015_runtime'}
+    vs_runtime = vs_map.get(py_version[:3])
+    return [dist for dist in dists
+            if name_dist(dist) in (vs_runtime, 'msvc_runtime')]
+
+
+def unpack(download_dir, tmp_dir, dists):
+    """Unpack all packages into folders in tmp_dir.
+    """
+    print("Unpacking packages")
+    for fn in dists:
+        filepath = join(download_dir, fn)
+        dst_dir = join(tmp_dir, 'unpack', fn.replace('.tar.bz2', ''))
+        if isdir(dst_dir):
+            continue
+        print("  Unpacking %s" % fn)
+        with tarfile.open(filepath, 'r:bz2') as tar:
+            tar.extractall(dst_dir)
+
+
+def harvest_packages(path, dir_id, outdir=None):
+    """Create a component group containing all files in path
+
+    Stores the fragment outputs in comp_id.wxs files in outdir
+    (defaults to current dir)
+    """
+    dest_file = join(outdir or '', 'harvest.wxs')
+    args = [
+        HEAT_EXE,
+        'dir', path,
+        # Fragment file:
+        '-o', dest_file,
+        # Suppress COM elements, fragments, root directory as element,
+        # registry harvesting (these options will create a grouping 
+        # that most applications can use)
+        '-scom', '-sfrag', '-srd', '-sreg', '-ke',
+        # Prevent header spamming:
+        '-nologo',
+        # One component per package
+        '-t', join(WIX_DIR, 'FeatureLayout.xslt'),
+        # Generate GUIDs during harvesting:
+        '-ag',
+        # Link to Directory/@Id in template:
+        '-dr', dir_id
+    ]
+    check_call(args)
+
+
+def pkg2component(download_dir, tmp_dir, dists, py_version):
+    vs_dists = find_vs_runtimes(dists, py_version)
+    print("MSVC runtimes found: %s" % vs_dists)
+    if len(vs_dists) != 1:
+        sys.exit("Error: number of MSVC runtimes found: %d" % len(vs_dists))
+
+    harvest_packages(join(tmp_dir, 'unpack'), 'pkgs', tmp_dir)
+    for i, fn in enumerate(vs_dists + dists):
+        name, version, unused_build = fn.rsplit('-', 2)
+        comp_id = escape_xml(escape_id(name))
+        dir_id = escape_xml(escape_id(name + '_FOLDER'))
+        extracted_folder = fn.replace('.tar.bz2', '')
+        assert len(extracted_folder) > 0
+        if i == 0: # MSVC runtimes
+            assert 'runtime' in fn
+            comp_id = 'MSVC'
+        elif i == 1: # Python
+            assert fn.startswith('python-')
+            comp_id = 'Python'
+        elif fn == vs_dists[0]:
+            continue
+        yield "<Directory Id='%s' Name='%s' />" % (
+            dir_id, escape_xml(extracted_folder))
+
+
+def pkg2component_refs(dists, py_version):
+    vs_dists = find_vs_runtimes(dists, py_version)
+    for i, fn in enumerate(vs_dists + dists):
+        name, version, unused_build = fn.rsplit('-', 2)
+        if i < 2: # MSVC runtimes or Python
+            continue  # Included manually in template
+        elif fn == vs_dists[0]:
+            continue
+        else:
+            yield "<ComponentGroupRef Id='%s' />" % escape_xml(escape_id(name))
+
+
+def harvested_fragment_args(dists, py_version, tmp_dir, ext):
+    vs_dists = find_vs_runtimes(dists, py_version)
+    for i, fn in enumerate(vs_dists + dists):
+        if i == 0: # MSVC runtimes
+            yield join(tmp_dir, 'MSVC' + ext)
+        elif i == 1: # Python
+            yield join(tmp_dir, 'Python' + ext)
+        elif fn == vs_dists[0]:
+            continue
+        else:
+            name, unused_version, unused_build = fn.rsplit('-', 2)
+            yield join(tmp_dir, escape_xml(escape_id(name)) + ext)
 
 
 def make_wxs(info, dir_path):
@@ -171,13 +216,13 @@ def make_wxs(info, dir_path):
     data = fill_template(data, replace)
 
     props = properties(info, dir_path)
-    components = pkg2component(download_dir, dists, py_version)
+    components = pkg2component(download_dir, dir_path, dists, py_version)
     comp_refs = pkg2component_refs(dists, py_version)
     # these are unescaped (and unquoted)
     for key, value in [
         ('@PROPERTIES@', '\n  '.join(props)),
         ('@PKG_COMPONENTS@', '\n          '.join(components)),
-        ('@PKG_COMPONENTS_REFS@', '\n        '.join(comp_refs)),
+        ('@PKG_COMPONENTS_REFS@', '\n      '.join(comp_refs)),
         ('@WEB_ENVIRONMENT@', '\n    '.join(web_cmd.splitlines())),
         ('@MENU_PKGS@', ' '.join(info.get('menu_packages', []))),
         ]:
@@ -224,6 +269,10 @@ def create(info):
     welcome_image = info.get('welcome_image', None)
     header_image = info.get('header_image', None)
     preconda.write_files(info, tmp_dir)
+    download_dir = info['_download_dir']
+    dists = info['_dists']
+    py_version = dists[0].rsplit('-', 2)[1]
+    unpack(download_dir, tmp_dir, dists)
     if 'pre_install' in info:
         sys.exit("Error: Cannot run pre install on Windows, sorry.\n")
 
@@ -241,19 +290,25 @@ def create(info):
     write_images(info, tmp_dir)
 
     wxs = make_wxs(info, tmp_dir)
-    args = [CANDLE_EXE, '-out', tmp_dir, wxs]
+
+    fragments = list(harvested_fragment_args(
+        dists, py_version, tmp_dir, '.wxs'))
+    harvet_wxs = join(tmp_dir, 'harvest.wxs')
+    args = [CANDLE_EXE, '-out', tmp_dir, harvet_wxs, wxs]
     print('Calling: %s' % args)
     check_call(args)
 
-    wixobj = os.path.splitext(wxs)[0] + '.wixobj'
+    wixobj = splitext(wxs)[0] + '.wixobj'
+    harvet_wixobj = join(tmp_dir, 'harvest.wixobj')
     # ['extA', 'extB'] -> ['-ext', 'extA', '-ext', 'extB']
     ext_args = list(chain(*zip_longest([], EXTENSIONS, fillvalue='-ext')))
     license_args = ['-dWixUILicenseRtf=%s' % license_file]
     args = [
         LIGHT_EXE, '-out', outfile,
+        '-b', join(tmp_dir, 'unpack'),
         '-dWixUIDialogBmp=welcome.bmp',
         '-dWixUIBannerBmp=header.bmp']
-    args += license_args + ext_args + [wixobj]
+    args += license_args + ext_args + [harvet_wixobj, wixobj]
     print('Calling: %s' % args)
     check_call(args)
     #shutil.rmtree(tmp_dir)

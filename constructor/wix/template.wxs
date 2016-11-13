@@ -13,7 +13,7 @@
   
   <!-- No compression as pkgs are alread compressed -->
   <Media Id='1' Cabinet='$(var.Name)' EmbedCab='yes'
-    CompressionLevel='none' />
+    CompressionLevel='mszip' />
 
   <!-- Begin file hierarchy -->
   <Directory Id='TARGETDIR' Name='SourceDir'>
@@ -102,10 +102,8 @@
       <ComponentRef Id='InstallPy' />
       <ComponentRef Id='Urls' />
       <ComponentRef Id='UrlsTxt' />
-      <ComponentRef Id='MSVC' />
-      <ComponentRef Id='MSVCFOLDER' />
-      <ComponentRef Id='Python' />
-      <ComponentRef Id='PythonFOLDER' />
+      <ComponentGroupRef Id='MSVC' />
+      <ComponentGroupRef Id='python' />
       <ComponentRef Id='InstallDirRegEntries' />
       <ComponentRef Id='UpdatePath' />
       <ComponentRef Id='PostInstall' />
@@ -134,7 +132,7 @@
 
   <!-- Begin UI library references -->
   <UIRef Id="WixUI_FeatureTree" />
-  <!--<UIRef Id="WixUI_Advanced" />-->
+  <!-- Use supplied icon for Add/Remove programs -->
   <UIRef Id="WixUI_ErrorProgressText" />
   <!-- End UI library references -->
 
