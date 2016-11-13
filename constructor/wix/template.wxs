@@ -3,7 +3,7 @@
 <Product Name='__NAME__' Manufacturer='__COMPANY__'
     Id='__PRODUCT_GUID__' 
     UpgradeCode='__UPGRADE_GUID__'
-    Language='1033' Codepage='1252' Version='__VERSION__'>
+    Language='1033' Codepage='1252' Version='__VIPV__'>
   <Package Id='*' Keywords='Installer'
       Description="__NAME__ Installer, Created using conda constructor"
       Manufacturer='__COMPANY__' InstallerVersion='100' Languages='1033'
