@@ -250,7 +250,7 @@ cannot execute native __PLAT__ binary, output from 'uname -a' is:" >&2
             exit 1
         fi
     fi
-    $PYTHON -E -s $PREFIX/pkgs/.install.py $INST_OPT || exit 1
+    $PYTHON -E -s $PREFIX/pkgs/.install.py post_extract $INST_OPT || exit 1
 #if not keep_pkgs
     rm $PKG
 #endif
@@ -259,7 +259,7 @@ cannot execute native __PLAT__ binary, output from 'uname -a' is:" >&2
 __INSTALL_COMMANDS__
 
 if [[ $FORCE == 1 ]]; then
-    $PYTHON -E -s $PREFIX/pkgs/.install.py --rm-dup || exit 1
+    $PYTHON -E -s $PREFIX/pkgs/.install.py post_extract --rm-dup || exit 1
 fi
 
 #if has_post_install

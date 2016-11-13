@@ -293,8 +293,8 @@ def linked(prefix):
 
 def link(prefix, dist, linktype=LINK_HARD):
     '''
-    Link a package in a specified prefix.  We assume that the packacge has
-    been extra_info in either
+    Link a package in a specified prefix.  We assume that the package has
+    been extracted into either
       - <PKGS_DIR>/dist
       - <ROOT_PREFIX>/ (when the linktype is None)
     '''
@@ -439,67 +439,59 @@ def post_extract(env_name='root'):
 
 
 def main():
-    global ROOT_PREFIX, PKGS_DIR
+    p = OptionParser(description="conda link / post extract tool used by installers")
 
-    p = OptionParser(description="conda link tool used by installers")
+    post_parser = subparsers.add_parser(
+        'post_extract',
+        dest='subcmd',
+        help='Perform actions after extracting a package to root prefix')
 
-    p.add_option('--root-prefix',
-                 action="store",
-                 default=abspath(join(__file__, '..', '..')),
-                 help="root prefix (defaults to %default)")
-
-    p.add_option('--post',
-                 action="store",
-                 help="perform post extract (on a single package), "
-                      "in environment NAME",
-                 metavar='NAME')
-
-    opts, args = p.parse_args()
-    if args:
-        p.error('no arguments expected')
-
-    ROOT_PREFIX = opts.root_prefix
-    PKGS_DIR = join(ROOT_PREFIX, 'pkgs')
-
-    if opts.post:
-        post_extract(opts.post)
-        return
-
-    if FORCE:
-        print("using -f (force) option")
-
-    link_idists()
-
-
-def main2():
-    global SKIP_SCRIPTS
-
-    p = OptionParser(description="conda post extract tool used by installers")
-
-    p.add_option('--skip-scripts',
+    post_parser.add_option('--skip-scripts',
                  action="store_true",
                  help="skip running pre/post-link scripts")
 
-    p.add_option('--rm-dup',
+    post_parser.add_option('--rm-dup',
                  action="store_true",
                  help="remove duplicates")
 
+    link_parser = subparsers.add_parser(
+        'link',
+        dest='subcmd',
+        help='Link package into environment')
+
+    link_parser.add_option('--root-prefix',
+                 action="store",
+                 default=abspath(join(__file__, '..', '..')),
+                 help="root prefix (defaults to %default)")
+    
+    link_parser.add_argument(
+        'package', nargs='+',
+        help="package(s) to install"
+    )
+
     opts, args = p.parse_args()
-    if args:
-        p.error('no arguments expected')
 
-    if opts.skip_scripts:
-        SKIP_SCRIPTS = True
+    if opts.subcmd == 'post_extract':
+        global SKIP_SCRIPTS
+        if args:
+            p.error('no arguments expected')
 
-    if opts.rm_dup:
-        remove_duplicates()
-        return
+        if opts.skip_scripts:
+            SKIP_SCRIPTS = True
 
-    post_extract()
+        if opts.rm_dup:
+            remove_duplicates()
+            return
+
+        post_extract()
+    else:
+        global ROOT_PREFIX, PKGS_DIR
+        ROOT_PREFIX = opts.root_prefix
+        PKGS_DIR = join(ROOT_PREFIX, 'pkgs')
+
+        for dist in args:
+            link(ROOT_PREFIX, dist)
 
 
 if __name__ == '__main__':
-    if IDISTS:
-        main()
-    else: # common usecase
-        main2()
+    main()

@@ -65,7 +65,7 @@ def pkg_commands(download_dir, dists, py_version, keep_pkgs):
             continue
         if n == 1:
             assert fn.startswith('python-')
-        cmd = r'"$INSTDIR\pythonw.exe" -E -s "$INSTDIR\pkgs\.install.py"'
+        cmd = r'"$INSTDIR\pythonw.exe"  -E -s "$INSTDIR\pkgs\.install.py" post_extract'
         yield "ExecWait '%s'" % cmd
         if keep_pkgs:
             continue
