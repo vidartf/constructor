@@ -12,7 +12,7 @@ import tempfile
 import tarfile
 from itertools import chain
 from six.moves import zip_longest
-from os.path import abspath, dirname, isfile, join, splitext
+from os.path import abspath, dirname, isfile, isdir, join, splitext, sep
 from subprocess import check_call, check_output
 import uuid
 from xml.sax.saxutils import escape as escape_xml
@@ -245,15 +245,14 @@ Error: no file %s
 
 def create(info):
     verify_wix_install()
-    # tmp_dir = tempfile.mkdtemp()
-    tmp_dir = 'c:\\github\\ctorout\\build\\'
+    tmp_dir = tempfile.mkdtemp() + sep
     outfile = info['_outpath']
     license_file = abspath(info.get(
         'license_file',
         join(WIX_DIR, 'placeholder_license.txt')))
     preconda.write_files(info, tmp_dir)
     dists = info['_dists']
-    py_version = dists[0].rsplit('-', 2)[1]
+    download_dir = info['_download_dir']
     unpack(download_dir, tmp_dir, dists)
     if 'pre_install' in info:
         sys.exit("Error: Cannot run pre install on Windows, sorry.\n")
@@ -290,7 +289,7 @@ def create(info):
     args += license_args + ext_args + [harvet_wixobj, wixobj]
     print('Calling: %s' % args)
     check_call(args)
-    #shutil.rmtree(tmp_dir)
+    shutil.rmtree(tmp_dir)
 
 
 if __name__ == '__main__':

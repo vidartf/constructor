@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
 <Product Name='__NAME__' Manufacturer='__COMPANY__'
-    Id='__PRODUCT_GUID__' 
+    Id='__PRODUCT_GUID__'
     UpgradeCode='__UPGRADE_GUID__'
     Language='1033' Codepage='1252' Version='__VIPV__'>
   <Package Id='*' Keywords='Installer'
@@ -10,7 +10,7 @@
       Compressed='yes' SummaryCodepage='1252' />
 
   @PROPERTIES@
-  
+
   <!-- No compression as pkgs are alread compressed -->
   <Media Id='1' Cabinet='$(var.Name)' EmbedCab='yes'
     CompressionLevel='mszip' />
@@ -52,7 +52,7 @@
   <!-- Begin environment variables -->
   <DirectoryRef Id='TARGETDIR'>
     <Component Id='UpdatePath' Guid="$(var.EnvGUID)">
-      <Environment Id='UpdatePathEntries' Name='PATH' Action='set' 
+      <Environment Id='UpdatePathEntries' Name='PATH' Action='set'
           Permanent='no' System='no' Part='first'
           Value='[INSTALLDIR]\Library\bin;[INSTALLDIR]\Scripts;[INSTALLDIR]' />
     </Component>
@@ -61,14 +61,14 @@
 
   <!-- Begin registry entries -->
   <DirectoryRef Id='TARGETDIR'>
-    <Component Id="InstallDirRegEntries" Guid="*"> 
+    <Component Id="InstallDirRegEntries" Guid="*">
       <RegistryKey Root='HKMU' Key='Software\Python\[Manufacturer]\[ProductName]'>
         <RegistryValue Type='string' Name='InstallDir' Value='[INSTALLDIR]' KeyPath="yes" />
         <RegistryValue Type='integer' Name='Flag' Value='0'/>
       </RegistryKey>
     </Component>
 
-    <Component Id="SysPythonRegistryEntries" Guid="*"> 
+    <Component Id="SysPythonRegistryEntries" Guid="*">
       <RegistryKey Root='HKLM' Key='Software\Python\PythonCore\$(var.PythonVersion)' >
 
         <RegistryKey Key='InstallPath'>
@@ -80,7 +80,7 @@
           <RegistryValue Type='string' Value='[INSTALLDIR]\Lib;$INSTDIR\DLLs' />
         </RegistryKey>
         <RegistryKey Key='Help\Main Python Documentation'>
-          <RegistryValue Type='string' Name='Main Python Documentation' 
+          <RegistryValue Type='string' Name='Main Python Documentation'
               Value='[INSTALLDIR]\Doc\python$(var.PythonVersionJustDigits).chm' />
         </RegistryKey>
       </RegistryKey>
@@ -109,13 +109,13 @@
       <ComponentRef Id='PostInstall' />
     </Feature>
 
-    <Feature Id='Packages' Title='$(var.Name) Packages' 
+    <Feature Id='Packages' Title='$(var.Name) Packages'
       AllowAdvertise='no' Level='1'
       Description='The packages that make up $(var.Name).'>
       @PKG_COMPONENTS_REFS@
     </Feature>
 
-    <Feature Id='SystemPython' Title='Register as system python' 
+    <Feature Id='SystemPython' Title='Register as system python'
         AllowAdvertise='no' Level='10'>
       <ComponentRef Id="SysPythonRegistryEntries" />
     </Feature>
@@ -123,7 +123,7 @@
   <!-- End feature hierarchy -->
 
   <!-- Begin upgrade handling -->
-  <MajorUpgrade 
+  <MajorUpgrade
     AllowDowngrades="no"
     DowngradeErrorMessage="A later version of [ProductName] is already installed."
     AllowSameVersionUpgrades="no"
