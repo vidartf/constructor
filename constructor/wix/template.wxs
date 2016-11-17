@@ -51,10 +51,21 @@
 
   <!-- Begin environment variables -->
   <DirectoryRef Id='TARGETDIR'>
-    <Component Id='UpdatePath' Guid="$(var.EnvGUID)">
-      <Environment Id='UpdatePathEntries' Name='PATH' Action='set'
-          Permanent='no' System='no' Part='first'
+    <!--<Component Id='TemporaryPath' Guid='$(var.EnvGUID)'>
+      <Environment Id='TemporaryPathEntries' Name='PATH' Action='set' 
+          Permanent='yes' System='no' Part='first'
           Value='[INSTALLDIR]\Library\bin;[INSTALLDIR]\Scripts;[INSTALLDIR]' />
+    </Component>
+    
+    <Component Id='SystemPath'>
+      <Environment Id='SystemPathEntries' Name='PATH' Action='set' 
+            Permanent='yes' System='yes' Part='last'
+            Value='[INSTALLDIR];[INSTALLDIR]\Scripts' />
+    </Component>-->
+    <Component Id='TemporaryPath' Guid='$(var.EnvGUID)'>
+      <Environment Id='SystemPathEntries' Name='TEST' Action='set' 
+            Permanent='no' System='no' Part='last'
+            Value='[INSTALLDIR];[INSTALLDIR]\Scripts' />
     </Component>
   </DirectoryRef>
   <!-- End environment variables -->
@@ -88,6 +99,41 @@
   </DirectoryRef>
   <!-- End registry entries -->
 
+  <!-- Begin custom actions-->
+  <CustomAction Id='LinkPython'
+      Directory='INSTALLDIR'
+      Execute='deferred' Return='check' Impersonate='yes'
+      ExeCommand='"[INSTALLDIR]$(PythonFolder)/python.exe" -E -s "[#InstallPyFILE]" link $(var.Dists)'  />
+
+  <CustomAction Id='LinkPackages'
+      Directory='INSTALLDIR'
+      Execute='deferred' Return='check' Impersonate='yes'
+      ExeCommand='"[INSTALLDIR]python.exe" -E -s "[#InstallPyFILE]" link $(var.Dists)'  />
+  <!--
+  <SetProperty Id='LinkPackages' Before='LinkPackages'
+      Sequence='execute'
+      Value='"[INSTALLDIR]\python.exe" -E -s "[#InstallPyFILE]" link $(var.Dists)' />
+  <CustomAction Id="LinkPackages" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="yes" />-->
+
+  <SetProperty Id='CreateStartMenus' Before='CreateStartMenus'
+      Sequence='execute'
+      Value='"[INSTALLDIR]python.exe" -E -s "[INSTALLDIR]\Lib\_helper.py" mkmenus' />
+  <CustomAction Id='CreateStartMenus' BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="yes" />
+  
+  <SetProperty Id='RunPostInstall' Before='RunPostInstall'
+      Sequence='execute'
+      Value='"[INSTALLDIR]\python.exe" -E -s "[INSTALLDIR]\Lib\_helper.py" post_install' />
+  <CustomAction Id="RunPostInstall" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="yes" />
+  <!-- End custom actions-->
+
+  <!-- Begin execution of custom actions -->
+  <InstallExecuteSequence>
+    <Custom Action="LinkPackages" After="InstallFiles"></Custom>
+    <Custom Action="CreateStartMenus" After="LinkPackages"></Custom>
+    <Custom Action="RunPostInstall" After="CreateStartMenus"></Custom>
+  </InstallExecuteSequence>
+  <!-- End execution of custom actions -->
+
 
   <!-- Begin feature hierarchy -->
   <Feature Id='Complete' Title='$(var.Name)'
@@ -105,7 +151,7 @@
       <ComponentGroupRef Id='MSVC' />
       <ComponentGroupRef Id='python' />
       <ComponentRef Id='InstallDirRegEntries' />
-      <ComponentRef Id='UpdatePath' />
+      <ComponentRef Id='TemporaryPath' />
       <ComponentRef Id='PostInstall' />
     </Feature>
 
