@@ -65,9 +65,11 @@ def properties(info, dir_path):
         WixDir=WIX_DIR,
         PythonVersion=py_version[:3],
         PythonVersionJustDigits=''.join(py_version.split('.')),
+        PythonFolder=dists[0].replace('.tar.bz2', ''),
         ResourcePath=dir_path,
         Name=info['name'],
         EnvGUID=random_uuid(),
+        Dists=' '.join((d.replace('.tar.bz2', '') for d in dists[1:])),
     )
     for key, fn in [('HeaderImage', 'header.bmp'),
                     ('WelcomeImage', 'welcome.bmp'),
